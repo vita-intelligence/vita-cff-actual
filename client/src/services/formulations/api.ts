@@ -19,6 +19,7 @@ import type {
   ReplaceLinesRequestDto,
   RollbackRequestDto,
   SaveVersionRequestDto,
+  SetProductionStageRequestDto,
   UpdateFormulationRequestDto,
 } from "./types";
 
@@ -234,6 +235,29 @@ export async function assignFormulationLeadScientist(
     formulationsEndpoints.leadScientist(orgId, formulationId),
     payload,
   );
+  return data;
+}
+
+export async function setProductionStage(
+  orgId: string,
+  formulationId: string,
+  payload: SetProductionStageRequestDto,
+): Promise<FormulationDto> {
+  const { data } = await apiClient.put<FormulationDto>(
+    formulationsEndpoints.productionStage(orgId, formulationId),
+    payload,
+  );
+  return data;
+}
+
+export async function startLabelDesign(
+  orgId: string,
+  formulationId: string,
+): Promise<{ detail: string; label_design_id?: string }> {
+  const { data } = await apiClient.post<{
+    detail: string;
+    label_design_id?: string;
+  }>(formulationsEndpoints.startLabelDesign(orgId, formulationId));
   return data;
 }
 

@@ -14,6 +14,7 @@ from apps.formulations.models import (
     FormulationLine,
     FormulationVersion,
     PowderTypeChoices,
+    ProductionStage,
     ProjectStatus,
     ProjectType,
 )
@@ -191,6 +192,7 @@ class FormulationReadSerializer(serializers.ModelSerializer):
             "disintegration_spec",
             "project_status",
             "project_type",
+            "production_stage",
             "approved_version_number",
             "sales_person",
             "lead_scientist",

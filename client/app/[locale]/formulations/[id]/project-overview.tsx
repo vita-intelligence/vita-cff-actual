@@ -17,10 +17,14 @@ import { useTranslations } from "next-intl";
 
 import { MrpeasyItemLink } from "@/components/mrpeasy/mrpeasy-item-link";
 import {
+  useFormulation,
   useProjectOverview,
+  type ProductionStage,
   type ProjectOverviewDto,
   type ProjectStatus,
 } from "@/services/formulations";
+import type { OrganizationDto } from "@/services/organizations/types";
+import { ProductionControls } from "./production-controls";
 
 
 /**
@@ -37,18 +41,38 @@ export function ProjectOverview({
   orgId,
   formulationId,
   initialData,
+  organization,
+  initialProductionStage,
 }: {
   orgId: string;
   formulationId: string;
   initialData: ProjectOverviewDto;
+  organization: OrganizationDto;
+  initialProductionStage: ProductionStage;
 }) {
   const tProject = useTranslations("project_overview");
   const query = useProjectOverview(orgId, formulationId, { initialData });
   const overview = query.data ?? initialData;
 
+  // Keep production_stage in sync with the formulation detail cache
+  // (mutated by ProductionControls) rather than the overview cache.
+  const formulationQuery = useFormulation(orgId, formulationId);
+  const productionStage =
+    formulationQuery.data?.production_stage ?? initialProductionStage;
+
   return (
     <article className="flex flex-col gap-6">
       <HeaderCard orgId={orgId} overview={overview} tProject={tProject} />
+      <div className="rounded-2xl bg-ink-0 px-8 py-5 shadow-sm ring-1 ring-ink-200">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+          Production controls
+        </p>
+        <ProductionControls
+          organization={organization}
+          formulationId={formulationId}
+          currentStage={productionStage}
+        />
+      </div>
       <KpiRow overview={overview} tProject={tProject} />
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <SnapshotCard overview={overview} tProject={tProject} />

@@ -32,7 +32,7 @@ from rest_framework.response import Response
 
 from apps.cff_submissions.models import CFFSubmission
 from apps.client_portal.api.views import PortalAPIView
-from apps.formulations.models import Formulation, ProjectStatus
+from apps.formulations.models import Formulation, ProductionStage, ProjectStatus
 from apps.label_design.constants import LabelDesignPath, LabelDesignStatus
 from apps.label_design.models import LabelDesign, LabelDesignTransition
 from apps.payments.constants import PaymentStatus
@@ -269,7 +269,69 @@ def _build_pipeline(
             "detail": "After a successful trial, we'll prepare the final spec.",
         }
 
-    # ---- Stage 6: Payment approved -------------------------------------
+    # ---- Stages 6-8: manual override or automated ----------------------
+    # When staff have set a manual production_stage the customer sees
+    # seven explicit stages (payment_pending → shipped) derived from
+    # that field instead of the automated payment/label/production block.
+    manual = formulation.production_stage
+    if manual != ProductionStage.NOT_STARTED:
+        stage_order = [
+            ProductionStage.PAYMENT_PENDING,
+            ProductionStage.LABEL_DESIGN,
+            ProductionStage.PROCUREMENT,
+            ProductionStage.PRODUCTION,
+            ProductionStage.QUALITY_CHECK,
+            ProductionStage.DISPATCH,
+            ProductionStage.SHIPPED,
+        ]
+        stage_labels = {
+            ProductionStage.PAYMENT_PENDING: "Payment pending",
+            ProductionStage.LABEL_DESIGN: "Label design",
+            ProductionStage.PROCUREMENT: "Procurement",
+            ProductionStage.PRODUCTION: "Production",
+            ProductionStage.QUALITY_CHECK: "Quality check",
+            ProductionStage.DISPATCH: "Dispatch",
+            ProductionStage.SHIPPED: "Shipped",
+        }
+        stage_details = {
+            ProductionStage.PAYMENT_PENDING: "Awaiting payment confirmation from our finance team.",
+            ProductionStage.LABEL_DESIGN: "Our design team is working on your label artwork.",
+            ProductionStage.PROCUREMENT: "Raw materials are being sourced and ordered.",
+            ProductionStage.PRODUCTION: "Your product is in production.",
+            ProductionStage.QUALITY_CHECK: "Quality checks are underway.",
+            ProductionStage.DISPATCH: "Your order is being prepared for dispatch.",
+            ProductionStage.SHIPPED: "Your product has shipped — expect delivery shortly.",
+        }
+        try:
+            current_index = stage_order.index(manual)
+        except ValueError:
+            current_index = 0
+
+        manual_stages = []
+        for i, s in enumerate(stage_order):
+            if i < current_index:
+                state = "done"
+            elif i == current_index:
+                state = "current"
+            else:
+                state = "future"
+            manual_stages.append({
+                "key": s,
+                "label": stage_labels[s],
+                "state": state,
+                "completed_at": None,
+                "detail": stage_details[s],
+            })
+
+        return [
+            request_stage,
+            proposal_stage,
+            draft_stage,
+            trial_stage,
+            final_stage,
+        ] + manual_stages
+
+    # ---- Stage 6: Payment approved (automated) -------------------------
     if payment is not None and payment.status == PaymentStatus.APPROVED:
         payment_stage = {
             "key": "payment",

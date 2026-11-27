@@ -32,6 +32,8 @@ import {
   rollbackFormulation,
   saveFormulationVersion,
   setApprovedVersion,
+  setProductionStage,
+  startLabelDesign,
   updateFormulation,
 } from "./api";
 import type {
@@ -43,6 +45,7 @@ import type {
   FormulationTotalsDto,
   FormulationVersionDto,
   PaginatedFormulationsDto,
+  ProductionStage,
   ProjectOverviewDto,
   ReplaceLinesRequestDto,
   RollbackRequestDto,
@@ -484,6 +487,44 @@ export function useSetApprovedVersion(
         formulationsQueryKeys.detail(orgId, formulationId),
         updated,
       );
+      queryClient.invalidateQueries({
+        queryKey: formulationsQueryKeys.overview(orgId, formulationId),
+      });
+    },
+  });
+}
+
+export function useSetProductionStage(
+  orgId: string,
+  formulationId: string,
+): UseMutationResult<FormulationDto, ApiError, ProductionStage> {
+  const queryClient = useQueryClient();
+  return useMutation<FormulationDto, ApiError, ProductionStage>({
+    mutationFn: (stage) =>
+      setProductionStage(orgId, formulationId, { stage }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(
+        formulationsQueryKeys.detail(orgId, formulationId),
+        updated,
+      );
+      queryClient.invalidateQueries({
+        queryKey: formulationsQueryKeys.overview(orgId, formulationId),
+      });
+    },
+  });
+}
+
+export function useStartLabelDesign(
+  orgId: string,
+  formulationId: string,
+): UseMutationResult<{ detail: string; label_design_id?: string }, ApiError, void> {
+  const queryClient = useQueryClient();
+  return useMutation<{ detail: string; label_design_id?: string }, ApiError, void>({
+    mutationFn: () => startLabelDesign(orgId, formulationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: formulationsQueryKeys.detail(orgId, formulationId),
+      });
       queryClient.invalidateQueries({
         queryKey: formulationsQueryKeys.overview(orgId, formulationId),
       });

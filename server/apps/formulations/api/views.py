@@ -854,3 +854,133 @@ class FormulationCloneView(APIView):
             FormulationReadSerializer(result).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class FormulationProductionStageView(APIView):
+    """``PUT`` ``/.../formulations/<id>/production-stage/``.
+
+    Sets the manual production pipeline stage displayed on the customer
+    portal. When the stage is anything other than ``not_started`` the
+    portal replaces the automated payment/label/production block with
+    seven explicit manual stages driven by this field.
+
+    Body: ``{"stage": "<ProductionStage value>"}``
+    """
+
+    permission_classes = (HasFormulationsPermission,)
+    required_capability = FormulationsCapability.EDIT
+
+    def put(
+        self, request: Request, org_id: str, formulation_id: str
+    ) -> Response:
+        from apps.audit.services import record as record_audit
+        from apps.formulations.models import ProductionStage
+
+        try:
+            formulation = get_formulation(
+                organization=self.organization, formulation_id=formulation_id
+            )
+        except FormulationNotFound as exc:
+            raise NotFound() from exc
+
+        payload = request.data if isinstance(request.data, dict) else {}
+        stage = str(payload.get("stage", "")).strip()
+        valid = {choice[0] for choice in ProductionStage.choices}
+        if stage not in valid:
+            return Response(
+                {"stage": ["invalid_production_stage"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        previous = formulation.production_stage
+        formulation.production_stage = stage
+        formulation.save(update_fields=["production_stage", "updated_at"])
+
+        record_audit(
+            organization=self.organization,
+            actor=request.user,
+            action="formulation.set_production_stage",
+            target=formulation,
+            before={"production_stage": previous},
+            after={"production_stage": stage},
+        )
+
+        formulation.refresh_from_db()
+        return Response(
+            FormulationReadSerializer(formulation).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class FormulationStartLabelDesignView(APIView):
+    """``POST`` ``/.../formulations/<id>/start-label-design/``.
+
+    Manually bootstraps the LabelDesign workflow, bypassing the normal
+    "customer signs final spec" gate. Used to unblock projects where
+    the team has agreed to proceed without a formal customer signature
+    on the final spec sheet.
+
+    If a ``LabelDesign`` already exists in ``PAYMENT_PENDING`` it is
+    advanced to ``LABEL_PATH_PENDING``. If it already exists at or
+    past ``LABEL_PATH_PENDING`` the endpoint is a no-op (returns 200
+    with the existing row). If no ``LabelDesign`` exists one is
+    created directly at ``LABEL_PATH_PENDING``.
+    """
+
+    permission_classes = (HasFormulationsPermission,)
+    required_capability = FormulationsCapability.EDIT
+
+    def post(
+        self, request: Request, org_id: str, formulation_id: str
+    ) -> Response:
+        from apps.audit.services import record as record_audit
+        from apps.label_design.constants import LabelDesignStatus
+        from apps.label_design.models import LabelDesign
+        from apps.label_design.services import transition_status
+
+        try:
+            formulation = get_formulation(
+                organization=self.organization, formulation_id=formulation_id
+            )
+        except FormulationNotFound as exc:
+            raise NotFound() from exc
+
+        existing = LabelDesign.objects.filter(formulation=formulation).first()
+
+        if existing is not None:
+            if existing.status == LabelDesignStatus.PAYMENT_PENDING:
+                transition_status(
+                    existing,
+                    to_status=LabelDesignStatus.LABEL_PATH_PENDING,
+                    actor=request.user,
+                    notes="manually started by staff",
+                )
+                record_audit(
+                    organization=self.organization,
+                    actor=request.user,
+                    action="formulation.start_label_design",
+                    target=formulation,
+                    before={"label_design_status": LabelDesignStatus.PAYMENT_PENDING},
+                    after={"label_design_status": LabelDesignStatus.LABEL_PATH_PENDING},
+                )
+            # Already past PAYMENT_PENDING — nothing to do.
+            return Response({"detail": "ok"}, status=status.HTTP_200_OK)
+
+        # No LabelDesign yet — create one directly at LABEL_PATH_PENDING.
+        ld = LabelDesign.objects.create(
+            organization=self.organization,
+            formulation=formulation,
+            status=LabelDesignStatus.LABEL_PATH_PENDING,
+        )
+        record_audit(
+            organization=self.organization,
+            actor=request.user,
+            action="formulation.start_label_design",
+            target=formulation,
+            before={"label_design_status": None},
+            after={"label_design_status": LabelDesignStatus.LABEL_PATH_PENDING},
+        )
+        return Response(
+            {"detail": "ok", "label_design_id": str(ld.id)},
+            status=status.HTTP_201_CREATED,
+        )

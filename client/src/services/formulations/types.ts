@@ -52,6 +52,32 @@ export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export const PROJECT_TYPES = ["custom", "ready_to_go"] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
 
+/** Manual production pipeline stage — set by staff to show the
+ *  customer where their order is. ``not_started`` means the portal
+ *  uses the automated LabelDesign-driven stages instead. */
+export const PRODUCTION_STAGES = [
+  "not_started",
+  "payment_pending",
+  "label_design",
+  "procurement",
+  "production",
+  "quality_check",
+  "dispatch",
+  "shipped",
+] as const;
+export type ProductionStage = (typeof PRODUCTION_STAGES)[number];
+
+export const PRODUCTION_STAGE_LABELS: Readonly<Record<ProductionStage, string>> = {
+  not_started: "Not started",
+  payment_pending: "Payment pending",
+  label_design: "Label design",
+  procurement: "Procurement",
+  production: "Production",
+  quality_check: "Quality check",
+  dispatch: "Dispatch",
+  shipped: "Shipped",
+} as const;
+
 export interface CapsuleSizeOption {
   readonly key: string;
   readonly label: string;
@@ -294,6 +320,7 @@ export interface FormulationDto {
   readonly disintegration_spec: string;
   readonly project_status: ProjectStatus;
   readonly project_type: ProjectType;
+  readonly production_stage: ProductionStage;
   readonly approved_version_number: number | null;
   readonly sales_person: SalesPersonDto | null;
   readonly lead_scientist: LeadScientistDto | null;
@@ -591,4 +618,8 @@ export interface ProjectOverviewDto {
   readonly compliance: ComplianceSnapshotDto;
   readonly totals: OverviewTotalsDto;
   readonly activity: readonly ProjectActivityEntryDto[];
+}
+
+export interface SetProductionStageRequestDto {
+  readonly stage: ProductionStage;
 }

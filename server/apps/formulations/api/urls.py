@@ -15,8 +15,10 @@ from apps.formulations.api.views import (
     FormulationLinesView,
     FormulationListCreateView,
     FormulationOverviewView,
+    FormulationProductionStageView,
     FormulationRollbackView,
     FormulationSalesPersonView,
+    FormulationStartLabelDesignView,
     FormulationVersionListView,
 )
 
@@ -77,6 +79,16 @@ urlpatterns = [
         "organizations/<uuid:org_id>/formulations/<uuid:formulation_id>/clone/",
         FormulationCloneView.as_view(),
         name="formulation-clone",
+    ),
+    path(
+        "organizations/<uuid:org_id>/formulations/<uuid:formulation_id>/production-stage/",
+        FormulationProductionStageView.as_view(),
+        name="formulation-production-stage",
+    ),
+    path(
+        "organizations/<uuid:org_id>/formulations/<uuid:formulation_id>/start-label-design/",
+        FormulationStartLabelDesignView.as_view(),
+        name="formulation-start-label-design",
     ),
     path(
         "organizations/<uuid:org_id>/formulations/rd-pipeline/",

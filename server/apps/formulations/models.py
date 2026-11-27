@@ -44,6 +44,26 @@ class ProjectStatus(models.TextChoices):
     DISCONTINUED = "discontinued", _("Discontinued")
 
 
+class ProductionStage(models.TextChoices):
+    """Manual production pipeline stage — set by staff to show the
+    customer where their order is after label design completes.
+
+    ``NOT_STARTED`` is the default: the automated LabelDesign workflow
+    drives stages 6-8 on the portal. Once staff flip to any other
+    value the portal replaces the automated payment/label/production
+    block with seven explicit manual stages derived from this field.
+    """
+
+    NOT_STARTED = "not_started", _("Not started")
+    PAYMENT_PENDING = "payment_pending", _("Payment pending")
+    LABEL_DESIGN = "label_design", _("Label design")
+    PROCUREMENT = "procurement", _("Procurement")
+    PRODUCTION = "production", _("Production")
+    QUALITY_CHECK = "quality_check", _("Quality check")
+    DISPATCH = "dispatch", _("Dispatch")
+    SHIPPED = "shipped", _("Shipped")
+
+
 class ProjectType(models.TextChoices):
     """Commercial engagement model for a project.
 
@@ -416,6 +436,19 @@ class Formulation(models.Model):
             "Custom (bespoke development + deposit) vs Ready to Go "
             "(existing recipe, faster turnaround). Drives the proposal "
             "template rendered for the client."
+        ),
+    )
+    production_stage = models.CharField(
+        _("production stage"),
+        max_length=20,
+        choices=ProductionStage.choices,
+        default=ProductionStage.NOT_STARTED,
+        db_index=True,
+        help_text=_(
+            "Manual production pipeline stage shown to the customer on "
+            "the portal. When set to anything other than 'not_started' "
+            "the portal replaces the automated payment/label/production "
+            "block with seven explicit manual stages driven by this field."
         ),
     )
 

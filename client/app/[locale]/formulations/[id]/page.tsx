@@ -37,6 +37,8 @@ export default async function ProjectOverviewPage({
             orgId={organization.id}
             formulationId={formulation.id}
             initialData={overview}
+            organization={organization}
+            initialProductionStage={formulation.production_stage}
           />
         </ProjectShell>
 

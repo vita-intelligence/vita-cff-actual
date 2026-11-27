@@ -15,6 +15,8 @@ export {
   rollbackFormulation,
   saveFormulationVersion,
   setApprovedVersion,
+  setProductionStage,
+  startLabelDesign,
   updateFormulation,
 } from "./api";
 export {
@@ -34,6 +36,8 @@ export {
   useRollbackFormulation,
   useSaveVersion,
   useSetApprovedVersion,
+  useSetProductionStage,
+  useStartLabelDesign,
   useUpdateFormulation,
 } from "./hooks";
 export {
@@ -78,6 +82,8 @@ export {
   DOSAGE_FORMS,
   FULLY_SUPPORTED_DOSAGE_FORMS,
   POWDER_TYPES,
+  PRODUCTION_STAGES,
+  PRODUCTION_STAGE_LABELS,
   PROJECT_STATUSES,
   PROJECT_TYPES,
   TABLET_SIZES,
@@ -94,6 +100,7 @@ export {
   type FormulationTotalsDto,
   type FormulationVersionDto,
   type PowderType,
+  type ProductionStage,
   type ProjectActivityEntryDto,
   type ProjectOverviewDto,
   type ProjectStatus,
@@ -109,6 +116,7 @@ export {
   type SaveVersionRequestDto,
   type LeadScientistDto,
   type SalesPersonDto,
+  type SetProductionStageRequestDto,
   type TabletSizeOption,
   type UpdateFormulationRequestDto,
   type ViabilityDto,
