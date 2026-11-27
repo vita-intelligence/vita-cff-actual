@@ -152,6 +152,8 @@ class ProjectOverview:
     compliance: ComplianceSnapshot
     totals: TotalsSnapshot
     activity: list[ActivityEntry]
+    customer_signed_proposal: bool
+    customer_signed_draft_spec: bool
 
 
 # ---------------------------------------------------------------------------
@@ -571,7 +573,21 @@ def compute_project_overview(formulation: Formulation) -> ProjectOverview:
     and ``None`` compliance fields in that case.
     """
 
+    from apps.proposals.models import Proposal
+    from apps.specifications.models import SpecificationSheet, SpecificationDocumentKind
+
     latest = _latest_version(formulation)
+
+    customer_signed_proposal = Proposal.objects.filter(
+        formulation_version__formulation=formulation,
+        customer_signed_at__isnull=False,
+    ).exists()
+
+    customer_signed_draft_spec = SpecificationSheet.objects.filter(
+        formulation_version__formulation=formulation,
+        document_kind=SpecificationDocumentKind.DRAFT,
+        customer_signed_at__isnull=False,
+    ).exists()
 
     return ProjectOverview(
         id=str(formulation.id),
@@ -598,4 +614,6 @@ def compute_project_overview(formulation: Formulation) -> ProjectOverview:
         compliance=_compliance_snapshot(latest),
         totals=_totals_snapshot(latest),
         activity=_activity_feed(formulation),
+        customer_signed_proposal=customer_signed_proposal,
+        customer_signed_draft_spec=customer_signed_draft_spec,
     )

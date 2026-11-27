@@ -63,16 +63,18 @@ export function ProjectOverview({
   return (
     <article className="flex flex-col gap-6">
       <HeaderCard orgId={orgId} overview={overview} tProject={tProject} />
-      <div className="rounded-2xl bg-ink-0 px-8 py-5 shadow-sm ring-1 ring-ink-200">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
-          Production controls
-        </p>
-        <ProductionControls
-          organization={organization}
-          formulationId={formulationId}
-          currentStage={productionStage}
-        />
-      </div>
+      {(overview.customer_signed_proposal && overview.customer_signed_draft_spec) && (
+        <div className="rounded-2xl bg-ink-0 px-8 py-5 shadow-sm ring-1 ring-ink-200">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+            Production controls
+          </p>
+          <ProductionControls
+            organization={organization}
+            formulationId={formulationId}
+            currentStage={productionStage}
+          />
+        </div>
+      )}
       <KpiRow overview={overview} tProject={tProject} />
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <SnapshotCard overview={overview} tProject={tProject} />

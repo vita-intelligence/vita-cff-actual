@@ -45,23 +45,22 @@ class ProjectStatus(models.TextChoices):
 
 
 class ProductionStage(models.TextChoices):
-    """Manual production pipeline stage — set by staff to show the
-    customer where their order is after label design completes.
+    """Manual production pipeline stage — set by staff to override the
+    portal journey for the customer.
 
-    ``NOT_STARTED`` is the default: the automated LabelDesign workflow
-    drives stages 6-8 on the portal. Once staff flip to any other
-    value the portal replaces the automated payment/label/production
-    block with seven explicit manual stages derived from this field.
+    ``NOT_STARTED`` is the default: the automated logic drives the
+    pipeline. Any other value replaces the full 8-stage journey with
+    the first 3 stages always "done" and the selected stage as current.
+    Values map 1-to-1 with the journey stages the customer sees.
     """
 
     NOT_STARTED = "not_started", _("Not started")
-    PAYMENT_PENDING = "payment_pending", _("Payment pending")
+    TRIAL = "trial", _("Trial batch")
+    FINAL_SPEC = "final_spec", _("Final specification")
+    PAYMENT = "payment", _("Payment")
     LABEL_DESIGN = "label_design", _("Label design")
-    PROCUREMENT = "procurement", _("Procurement")
     PRODUCTION = "production", _("Production")
-    QUALITY_CHECK = "quality_check", _("Quality check")
-    DISPATCH = "dispatch", _("Dispatch")
-    SHIPPED = "shipped", _("Shipped")
+    FINISHED = "finished", _("Finished")
 
 
 class ProjectType(models.TextChoices):

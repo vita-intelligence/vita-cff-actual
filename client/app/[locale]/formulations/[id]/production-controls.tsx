@@ -1,13 +1,14 @@
 "use client";
 
 import { ChevronDown, PlayCircle } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { hasFlatCapability } from "@/lib/auth/capabilities";
 import type { OrganizationDto } from "@/services/organizations/types";
 import {
-  PRODUCTION_STAGES,
   PRODUCTION_STAGE_LABELS,
+  SELECTABLE_PRODUCTION_STAGES,
   useSetProductionStage,
   useStartLabelDesign,
   type ProductionStage,
@@ -70,9 +71,7 @@ function ProductionStageDropdown({
         className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-ink-0 px-3 py-1.5 text-sm font-medium text-ink-700 shadow-sm hover:bg-ink-50 disabled:opacity-60"
       >
         <span>
-          {currentStage === "not_started"
-            ? "Set production stage"
-            : PRODUCTION_STAGE_LABELS[currentStage]}
+          {PRODUCTION_STAGE_LABELS[currentStage]}
         </span>
         <ChevronDown className="h-3.5 w-3.5 text-ink-400" />
       </button>
@@ -84,8 +83,8 @@ function ProductionStageDropdown({
             className="fixed inset-0 z-10"
             onClick={() => setOpen(false)}
           />
-          <ul className="absolute left-0 top-full z-20 mt-1 min-w-[180px] rounded-xl border border-ink-200 bg-ink-0 py-1 shadow-lg">
-            {PRODUCTION_STAGES.map((stage) => (
+          <ul className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-ink-200 bg-ink-0 py-1 shadow-lg">
+            {SELECTABLE_PRODUCTION_STAGES.map((stage) => (
               <li key={stage}>
                 <button
                   type="button"
@@ -100,6 +99,20 @@ function ProductionStageDropdown({
                 </button>
               </li>
             ))}
+            {currentStage !== "not_started" && (
+              <>
+                <li className="mx-3 my-1 border-t border-ink-100" />
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect("not_started")}
+                    className="w-full px-4 py-2 text-left text-sm text-ink-400 hover:bg-ink-50"
+                  >
+                    Reset to automated
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
         </>
       )}
@@ -115,12 +128,25 @@ function StartLabelDesignButton({
   orgId: string;
   formulationId: string;
 }) {
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
   const mutation = useStartLabelDesign(orgId, formulationId);
+
+  const handleClick = () => {
+    mutation.mutate(undefined, {
+      onSuccess: (data) => {
+        if (data.label_design_id) {
+          router.push(`/${locale}/labelling/${data.label_design_id}`);
+        }
+      },
+    });
+  };
 
   return (
     <button
       type="button"
-      onClick={() => mutation.mutate()}
+      onClick={handleClick}
       disabled={mutation.isPending}
       className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-medium text-ink-0 shadow-sm hover:bg-orange-600 disabled:opacity-60"
     >

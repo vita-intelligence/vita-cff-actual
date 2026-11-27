@@ -269,43 +269,83 @@ def _build_pipeline(
             "detail": "After a successful trial, we'll prepare the final spec.",
         }
 
-    # ---- Stages 6-8: manual override or automated ----------------------
-    # When staff have set a manual production_stage the customer sees
-    # seven explicit stages (payment_pending → shipped) derived from
-    # that field instead of the automated payment/label/production block.
+    # ---- Manual override — show the full 8-stage journey ---------------
+    # When staff set a production_stage the customer sees the same
+    # 8-stage journey but with the first 3 always "done" and the
+    # manually-selected stage as "current".  Stages before the current
+    # one are "done"; stages after are "future".
     manual = formulation.production_stage
     if manual != ProductionStage.NOT_STARTED:
         stage_order = [
-            ProductionStage.PAYMENT_PENDING,
+            ProductionStage.TRIAL,
+            ProductionStage.FINAL_SPEC,
+            ProductionStage.PAYMENT,
             ProductionStage.LABEL_DESIGN,
-            ProductionStage.PROCUREMENT,
             ProductionStage.PRODUCTION,
-            ProductionStage.QUALITY_CHECK,
-            ProductionStage.DISPATCH,
-            ProductionStage.SHIPPED,
+            ProductionStage.FINISHED,
         ]
         stage_labels = {
-            ProductionStage.PAYMENT_PENDING: "Payment pending",
+            ProductionStage.TRIAL: "Trial batch",
+            ProductionStage.FINAL_SPEC: "Final specification",
+            ProductionStage.PAYMENT: "Payment",
             ProductionStage.LABEL_DESIGN: "Label design",
-            ProductionStage.PROCUREMENT: "Procurement",
             ProductionStage.PRODUCTION: "Production",
-            ProductionStage.QUALITY_CHECK: "Quality check",
-            ProductionStage.DISPATCH: "Dispatch",
-            ProductionStage.SHIPPED: "Shipped",
+            ProductionStage.FINISHED: "Finished",
         }
         stage_details = {
-            ProductionStage.PAYMENT_PENDING: "Awaiting payment confirmation from our finance team.",
+            ProductionStage.TRIAL: "We're producing a trial batch and running quality checks.",
+            ProductionStage.FINAL_SPEC: "After a successful trial, we'll prepare the final spec.",
+            ProductionStage.PAYMENT: "Payment is recorded after the final spec is signed.",
             ProductionStage.LABEL_DESIGN: "Our design team is working on your label artwork.",
-            ProductionStage.PROCUREMENT: "Raw materials are being sourced and ordered.",
             ProductionStage.PRODUCTION: "Your product is in production.",
-            ProductionStage.QUALITY_CHECK: "Quality checks are underway.",
-            ProductionStage.DISPATCH: "Your order is being prepared for dispatch.",
-            ProductionStage.SHIPPED: "Your product has shipped — expect delivery shortly.",
+            ProductionStage.FINISHED: "Your product is complete — thank you for working with us!",
         }
         try:
             current_index = stage_order.index(manual)
         except ValueError:
             current_index = 0
+
+        # First 3 stages always "done" — use real timestamps if available
+        signed_proposal = _first_signed_proposal(proposals)
+        draft_signed = _first_signed(_draft_specs(sheets))
+        prepended = [
+            {
+                "key": "request",
+                "label": "Request submitted",
+                "state": "done" if cff else "skipped",
+                "completed_at": _iso(
+                    getattr(cff, "wix_created_date", None)
+                    or getattr(cff, "imported_at", None)
+                ) if cff else None,
+                "detail": (
+                    "Started by Vita directly — no formal request submitted."
+                    if not cff
+                    else "Custom formulation request submitted."
+                ),
+            },
+            {
+                "key": "proposal",
+                "label": "Proposal signed",
+                "state": "done",
+                "completed_at": _iso(signed_proposal.customer_signed_at) if signed_proposal else None,
+                "detail": (
+                    f"You signed proposal {signed_proposal.code}."
+                    if signed_proposal
+                    else "Proposal complete."
+                ),
+            },
+            {
+                "key": "draft_spec",
+                "label": "Draft specification signed",
+                "state": "done",
+                "completed_at": _iso(draft_signed.customer_signed_at) if draft_signed else None,
+                "detail": (
+                    "You approved the draft recipe — trial batch can begin."
+                    if draft_signed
+                    else "Draft specification complete."
+                ),
+            },
+        ]
 
         manual_stages = []
         for i, s in enumerate(stage_order):
@@ -323,7 +363,7 @@ def _build_pipeline(
                 "detail": stage_details[s],
             })
 
-        return manual_stages
+        return prepended + manual_stages
 
     # ---- Stage 6: Payment approved (automated) -------------------------
     if payment is not None and payment.status == PaymentStatus.APPROVED:

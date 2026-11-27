@@ -963,8 +963,11 @@ class FormulationStartLabelDesignView(APIView):
                     before={"label_design_status": LabelDesignStatus.PAYMENT_PENDING},
                     after={"label_design_status": LabelDesignStatus.LABEL_PATH_PENDING},
                 )
-            # Already past PAYMENT_PENDING — nothing to do.
-            return Response({"detail": "ok"}, status=status.HTTP_200_OK)
+            # Always return the ID so the frontend can navigate there.
+            return Response(
+                {"detail": "ok", "label_design_id": str(existing.id)},
+                status=status.HTTP_200_OK,
+            )
 
         # No LabelDesign yet — create one directly at LABEL_PATH_PENDING.
         ld = LabelDesign.objects.create(

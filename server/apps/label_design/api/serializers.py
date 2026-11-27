@@ -480,28 +480,31 @@ class SubmitPreferencesSerializer(serializers.Serializer):
 
     def to_internal_value(self, data):
         # Multipart bodies can't carry nested structures, so the FE
-        # JSON-encodes list-valued fields before append()-ing them.
-        # Decode them back into native Python before delegating to the
-        # standard field validation — otherwise DRF sees a raw string
-        # and reports ``not_a_list``.
-        if hasattr(data, "copy"):
-            data = data.copy()
-        else:
-            data = dict(data)
+        # JSON-encodes list-valued fields before appending them.
+        #
+        # Two QueryDict pitfalls to avoid:
+        # 1. dict(qd) gives {'key': ['val']} — all values become lists,
+        #    breaking scalar CharField validation with ["invalid"].
+        # 2. DRF's ListField calls .getlist() on a MultiValueDict which
+        #    double-wraps already-parsed lists into [[...]], causing
+        #    not_a_dict on every item.
+        # Solution: use .dict() (flattens to last-value scalars) so we
+        # get a plain dict, then JSON-parse the list fields in-place.
+        plain: dict = data.dict() if hasattr(data, "dict") else dict(data)
         for key in self._JSON_LIST_FIELDS:
-            raw = data.get(key)
+            raw = plain.get(key)
             if isinstance(raw, str):
                 stripped = raw.strip()
                 if stripped == "":
-                    data[key] = []
+                    plain[key] = []
                     continue
                 try:
-                    data[key] = json.loads(stripped)
+                    plain[key] = json.loads(stripped)
                 except json.JSONDecodeError:
                     raise serializers.ValidationError(
                         {key: ["invalid_json"]}
                     )
-        return super().to_internal_value(data)
+        return super().to_internal_value(plain)
 
 
 class CustomerUploadArtworkSerializer(serializers.Serializer):

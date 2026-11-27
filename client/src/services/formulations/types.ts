@@ -52,30 +52,35 @@ export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export const PROJECT_TYPES = ["custom", "ready_to_go"] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
 
-/** Manual production pipeline stage — set by staff to show the
- *  customer where their order is. ``not_started`` means the portal
- *  uses the automated LabelDesign-driven stages instead. */
+/** Manual production pipeline stage — set by staff to override the
+ *  portal journey. ``not_started`` means automated logic drives the
+ *  pipeline. The other values map 1-to-1 with the customer journey
+ *  stages (stages 4-8). */
 export const PRODUCTION_STAGES = [
   "not_started",
-  "payment_pending",
+  "trial",
+  "final_spec",
+  "payment",
   "label_design",
-  "procurement",
   "production",
-  "quality_check",
-  "dispatch",
-  "shipped",
+  "finished",
 ] as const;
 export type ProductionStage = (typeof PRODUCTION_STAGES)[number];
 
+/** Stages shown in the staff dropdown — excludes ``not_started``
+ *  which resets to automated and is handled separately. */
+export const SELECTABLE_PRODUCTION_STAGES = PRODUCTION_STAGES.filter(
+  (s): s is Exclude<ProductionStage, "not_started"> => s !== "not_started",
+);
+
 export const PRODUCTION_STAGE_LABELS: Readonly<Record<ProductionStage, string>> = {
   not_started: "Not started",
-  payment_pending: "Payment pending",
+  trial: "Trial batch",
+  final_spec: "Final specification",
+  payment: "Payment",
   label_design: "Label design",
-  procurement: "Procurement",
   production: "Production",
-  quality_check: "Quality check",
-  dispatch: "Dispatch",
-  shipped: "Shipped",
+  finished: "Finished",
 } as const;
 
 export interface CapsuleSizeOption {
@@ -618,6 +623,8 @@ export interface ProjectOverviewDto {
   readonly compliance: ComplianceSnapshotDto;
   readonly totals: OverviewTotalsDto;
   readonly activity: readonly ProjectActivityEntryDto[];
+  readonly customer_signed_proposal: boolean;
+  readonly customer_signed_draft_spec: boolean;
 }
 
 export interface SetProductionStageRequestDto {
