@@ -323,13 +323,7 @@ def _build_pipeline(
                 "detail": stage_details[s],
             })
 
-        return [
-            request_stage,
-            proposal_stage,
-            draft_stage,
-            trial_stage,
-            final_stage,
-        ] + manual_stages
+        return manual_stages
 
     # ---- Stage 6: Payment approved (automated) -------------------------
     if payment is not None and payment.status == PaymentStatus.APPROVED:
@@ -824,10 +818,14 @@ class PortalProductDetailView(PortalAPIView):
                     payment=payment,
                     cff=cff,
                 ),
-                "next_action": _build_next_action(
-                    proposals=proposals,
-                    sheets=sheets,
-                    label_design=label_design,
+                "next_action": (
+                    None
+                    if formulation.production_stage != ProductionStage.NOT_STARTED
+                    else _build_next_action(
+                        proposals=proposals,
+                        sheets=sheets,
+                        label_design=label_design,
+                    )
                 ),
                 "documents": _build_documents(
                     proposals=proposals,
